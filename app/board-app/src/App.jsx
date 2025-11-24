@@ -29,9 +29,7 @@ export default function App() {
       <header>
         <h1>掲示板デモアプリ</h1>
         <p>
-          AKS 上でホストされる簡易掲示板。投稿は Azure VM 上の MySQL
-          に永続化され、ネットワーク障害時のみブラウザの LocalStorage
-          キャッシュへフォールバックします。
+          AKS 上でホストされる簡易掲示板。投稿は Azure VM 上の MySQL に永続化。
         </p>
         <a
           className="secret-link"
