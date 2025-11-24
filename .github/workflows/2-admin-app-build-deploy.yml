@@ -445,6 +445,11 @@ jobs:
         run: |
           echo "ADMIN_IMAGE_FULL=$ACR_LOGIN_SERVER/$ADMIN_IMAGE_NAME:$IMAGE_TAG" >> "$GITHUB_ENV"
 
+      - name: Container Apps のリビジョンサフィックスを生成
+        run: |
+          ATTEMPT=${GITHUB_RUN_ATTEMPT:-1}
+          echo "REVISION_SUFFIX=gh-${GITHUB_RUN_ID}-${ATTEMPT}" >> "$GITHUB_ENV"
+
       - name: ACR 認証情報を取得
         run: |
           az acr update --name "$ACR_NAME" --admin-enabled true
@@ -462,7 +467,7 @@ jobs:
             az containerapp secret set --name "$CONTAINER_APP_NAME" --resource-group "$RESOURCE_GROUP_NAME" \
               --secrets admin-username="$ACA_ADMIN_USERNAME" admin-password="$ACA_ADMIN_PASSWORD"
             az containerapp update --name "$CONTAINER_APP_NAME" --resource-group "$RESOURCE_GROUP_NAME" \
-              --image "$ADMIN_IMAGE_FULL" --revision-suffix "gh-${GITHUB_RUN_NUMBER}" \
+              --image "$ADMIN_IMAGE_FULL" --revision-suffix "$REVISION_SUFFIX" \
               --set-env-vars \
                 ADMIN_USERNAME=secretref:admin-username \
                 ADMIN_PASSWORD=secretref:admin-password \
@@ -478,7 +483,7 @@ jobs:
               --ingress external --target-port "$ADMIN_TARGET_PORT" \
               --min-replicas 0 --max-replicas 1 \
               --registry-server "$ACR_LOGIN_SERVER" --registry-username "$ACR_USERNAME" --registry-password "$ACR_PASSWORD" \
-              --revision-suffix "gh-${GITHUB_RUN_NUMBER}"
+              --revision-suffix "$REVISION_SUFFIX"
             az containerapp secret set --name "$CONTAINER_APP_NAME" --resource-group "$RESOURCE_GROUP_NAME" \
               --secrets admin-username="$ACA_ADMIN_USERNAME" admin-password="$ACA_ADMIN_PASSWORD"
             az containerapp update --name "$CONTAINER_APP_NAME" --resource-group "$RESOURCE_GROUP_NAME" \
