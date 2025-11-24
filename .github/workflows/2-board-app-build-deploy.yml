@@ -1294,26 +1294,28 @@ jobs:
           #       Azure LoadBalancer のヘルスプローブとポート不一致が発生する
           # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
           INGRESS_EXISTS=$(helm list -n ingress-nginx -q 2>/dev/null | grep -c "^ingress-nginx$" || echo "0")
+          CONTROLLER_SVC=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o name 2>/dev/null || true)
+          SHOULD_INSTALL=false
 
-          if [ "$INGRESS_EXISTS" != "0" ]; then
+          if [ "$INGRESS_EXISTS" != "0" ] && [ -n "$CONTROLLER_SVC" ]; then
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             echo "✅ Ingress Controller は既に存在（スキップ）"
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             
             # 既存設定の確認
             echo "📊 現在の Ingress Controller 情報:"
-            HELM_STATUS_JSON=$(helm status ingress-nginx -n ingress-nginx -o json 2>/dev/null || true)
-            if [ -n "$HELM_STATUS_JSON" ]; then
-              HELM_STATUS=$(echo "$HELM_STATUS_JSON" | jq -r '.info.status // "unknown"' 2>/dev/null || echo "unknown")
-            else
-              echo "⚠️ helm status 情報を取得できませんでした（サマリーは unknown として継続します）" >&2
+            HELM_STATUS_RAW=$(helm status ingress-nginx -n ingress-nginx 2>&1 || true)
+            if [ -n "$HELM_STATUS_RAW" ]; then
+              echo "$HELM_STATUS_RAW"
+              HELM_STATUS=$(echo "$HELM_STATUS_RAW" | awk -F': ' '/^STATUS:/ {print $2; exit}' | tr -d '\r' || true)
+            fi
+            if [ -z "${HELM_STATUS:-}" ]; then
+              echo "⚠️ helm status 情報を正しく取得できませんでした（サマリーは unknown として継続します）" >&2
               HELM_STATUS="unknown"
             fi
 
-            HELM_LIST_JSON=$(helm list -n ingress-nginx -o json 2>/dev/null || true)
-            if [ -n "$HELM_LIST_JSON" ]; then
-              CHART_VERSION=$(echo "$HELM_LIST_JSON" | jq -r '.[] | select(.name=="ingress-nginx") | .chart' 2>/dev/null || echo "unknown")
-            else
+            CHART_VERSION=$(helm list -n ingress-nginx --filter '^ingress-nginx$' 2>/dev/null | awk 'NR==2 {print $6}' || true)
+            if [ -z "$CHART_VERSION" ]; then
               CHART_VERSION="unknown"
             fi
             HTTP_NODEPORT=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.spec.ports[?(@.name=="http")].nodePort}' 2>/dev/null || echo "N/A")
@@ -1341,6 +1343,14 @@ jobs:
             
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           else
+            if [ "$INGRESS_EXISTS" != "0" ] && [ -z "$CONTROLLER_SVC" ]; then
+              echo "⚠️ Helm リリースは存在しますが Service が見つからないため、クリーンアップして再インストールします" >&2
+              helm uninstall ingress-nginx -n ingress-nginx || true
+            fi
+            SHOULD_INSTALL=true
+          fi
+
+          if [ "$SHOULD_INSTALL" = "true" ]; then
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             echo "🚀 Ingress Controller が存在しないため新規インストール"
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
