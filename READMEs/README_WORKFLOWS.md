@@ -23,6 +23,13 @@
   - `aksSkipCreate` フラグで既存クラスタを再利用可能
   - Storage/AKS/Container Apps への診断設定を main.bicep で自動作成し、Log Analytics に統合
 
+### 1.1 Azure Policy / Initiative 架構
+
+- `policy-deploy` ジョブではリソース グループ スコープに **Microsoft Cloud Security Benchmark v2 (Preview)** イニシアチブ (`/providers/Microsoft.Authorization/policySetDefinitions/e3ec7e09-768c-4b64-882c-fcada3772047`) を割り当て、タグ強制・SKU/リージョン制限・ログ送信など約 200 ルールをガードレール化します。
+- 割り当て名は `initiative-container-app-demo` で固定し、`infra/parameters/policy-dev.parameters.json` から `policyDefinitionReferenceId` ごとのパラメーターや `notScopes` を差し替えられるため、ステージング/本番で厳格度を簡単に調整できます。
+- `enableManagedIdentity=true` の場合は Policy Assignment に System Assigned ID を付与し、自動修復 (DeployIfNotExists/Modify) ポリシーが正しく動作するよう `managedIdentityLocation` を `LOCATION` 環境変数から注入します。
+- `README_INFRASTRUCTURE.md` 6 章でカテゴリ別の適用範囲 (コンテナ・ネットワーク・ID・データ保護・監視) を参照でき、`policy-dev.parameters.json` で `nonComplianceMessages` を随時更新することでガバナンス通知を改善できます。
+
 ## 2. `2️⃣ Board App Build & Deploy` (`.github/workflows/2-board-app-build-deploy.yml`)
 
 - **トリガー**: `push` (`app/board-app/**`, `app/board-api/**`, `app/board-app/k8s/**`), `workflow_run` (1️⃣ 完了時), `workflow_dispatch`
