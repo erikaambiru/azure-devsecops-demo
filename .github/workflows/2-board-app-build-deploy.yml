@@ -1266,6 +1266,10 @@ jobs:
           }
           ensure_rule "allow-azure-lb-probes" AzureLoadBalancer 30000-32767 300
           ensure_rule "allow-nodeport-from-internet" Internet 30000-32767 310
+          # Azure Standard Load Balancer は floating IP 有効時にバックエンド接続ポートを 80/443 として扱うため、
+          # NodePort 以外にもフロントポートを直接許可しないと外部アクセスがタイムアウトする。
+          ensure_rule "allow-http-from-internet" Internet 80 320
+          ensure_rule "allow-https-from-internet" Internet 443 330
 
       - name: Ingress Controller (nginx) を確認/インストール
         env:
