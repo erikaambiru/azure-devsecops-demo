@@ -1266,10 +1266,15 @@ jobs:
           }
           ensure_rule "allow-azure-lb-probes" AzureLoadBalancer 30000-32767 300
           ensure_rule "allow-nodeport-from-internet" Internet 30000-32767 310
+          # Network Watcher で VNet 内部 (例: VM) からの疎通試験が Default Deny で遮断されたため、
+          # 診断/監視用途向けに同レンジを VirtualNetwork からも許可しておく。
+          ensure_rule "allow-nodeport-from-vnet" VirtualNetwork 30000-32767 315
           # Azure Standard Load Balancer は floating IP 有効時にバックエンド接続ポートを 80/443 として扱うため、
           # NodePort 以外にもフロントポートを直接許可しないと外部アクセスがタイムアウトする。
           ensure_rule "allow-http-from-internet" Internet 80 320
           ensure_rule "allow-https-from-internet" Internet 443 330
+          ensure_rule "allow-http-from-vnet" VirtualNetwork 80 325
+          ensure_rule "allow-https-from-vnet" VirtualNetwork 443 335
 
       - name: Ingress Controller (nginx) を確認/インストール
         env:
