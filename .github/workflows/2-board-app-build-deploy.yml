@@ -1556,6 +1556,49 @@ jobs:
 
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
+      - name: Ingress/LoadBalancer 診断ログを取得
+        run: |
+          set -euo pipefail
+
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "📈 Ingress/LoadBalancer 診断ログ"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+          # Service 詳細で NodePort やアノテーションの変化を記録
+          echo "\n=== ingress-nginx-controller Service 詳細 ==="
+          kubectl describe svc -n ingress-nginx ingress-nginx-controller || true
+
+          # 直近イベントで IP 割り当てのタイムラインを把握
+          echo "\n=== ingress-nginx namespace の最近のイベント (20件) ==="
+          kubectl get events -n ingress-nginx --sort-by=.metadata.creationTimestamp | tail -n 20 || true
+
+          AKS_LOCATION=$(az aks show --resource-group "$RESOURCE_GROUP_NAME" --name "$AKS_CLUSTER_NAME" --query location -o tsv 2>/dev/null || echo "")
+          NSG_NAME=""
+          if [ -n "${NODE_RESOURCE_GROUP:-}" ]; then
+            NSG_NAME=$(az network nsg list --resource-group "$NODE_RESOURCE_GROUP" --query "[?contains(name,'aks-agentpool')].name | [0]" -o tsv 2>/dev/null || echo "")
+          fi
+
+          if [ -n "$AKS_LOCATION" ] && [ -n "$NSG_NAME" ]; then
+            WATCHER_INFO=$(az network watcher list --query "[?location=='$AKS_LOCATION'].{name:name,rg:resourceGroup}" -o tsv 2>/dev/null || echo "")
+            if [ -n "$WATCHER_INFO" ]; then
+              WATCHER_NAME=$(echo "$WATCHER_INFO" | head -n1 | cut -f1)
+              WATCHER_RG=$(echo "$WATCHER_INFO" | head -n1 | cut -f2)
+              if [ -n "$WATCHER_NAME" ] && [ -n "$WATCHER_RG" ]; then
+                echo "\n=== Flow Log 状態確認 (NSG: $NSG_NAME) ==="
+                az network watcher flow-log show \
+                  --location "$AKS_LOCATION" \
+                  --resource-group "$WATCHER_RG" \
+                  --nsg "$NSG_NAME" || echo "ℹ️ Flow Log が無効、または参照不可です"
+              else
+                echo "ℹ️ Network Watcher 情報を解決できませんでした (Flow Log はスキップ)" >&2
+              fi
+            else
+              echo "ℹ️ 対象リージョンで Network Watcher が有効化されていません (Flow Log はスキップ)" >&2
+            fi
+          else
+            echo "ℹ️ Flow Log 参照に必要な AKS ロケーションまたは NSG を取得できませんでした" >&2
+          fi
+
       - name: LoadBalancer 健康チェック
         run: |
           set -euo pipefail
