@@ -1526,11 +1526,24 @@ jobs:
             az network lb rule list --resource-group "$NODE_RG" --lb-name "$LB_NAME" \
               --query "[?frontendPort==\`80\`]" -o json | \
               jq -r '.[] | "  - \(.name): FrontendPort=\(.frontendPort), BackendPort=\(.backendPort)"'
-            
+
+            LB_IP=$(kubectl get svc -n ingress-nginx ingress-nginx-controller \
+              -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
+            if [ -z "$LB_IP" ]; then
+              echo "   ⚠️ LoadBalancer IP がまだ割り当てられていません" >&2
+            else
+              echo "   ℹ️ LoadBalancer IP: $LB_IP"
+            fi
+
             echo ""
             echo "🔍 LoadBalancer の反映を待機中..."
             for i in $(seq 1 12); do
-              if timeout 3 bash -c "echo > /dev/tcp/localhost/80" 2>/dev/null; then
+              if [ -z "$LB_IP" ]; then
+                LB_IP=$(kubectl get svc -n ingress-nginx ingress-nginx-controller \
+                  -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
+              fi
+
+              if [ -n "$LB_IP" ] && timeout 3 bash -c "echo > /dev/tcp/$LB_IP/80" 2>/dev/null; then
                 echo "   ✅ [$i/12] LoadBalancer が応答を開始しました"
                 break
               fi
@@ -1587,18 +1600,32 @@ jobs:
           # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
           # LoadBalancer ポート 80 接続確認（外部からの疎通テスト）
           # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-          # 過去の成功実績では 1 回目で接続できているためタイムアウトをさらに短縮
-          readonly CONNECTIVITY_TIMEOUT_SECONDS=90
+          # 成功ラン実績 (Run ID: 19659840389 等) では 4 分以内に応答しているため、この値を上限として再調整
+          readonly CONNECTIVITY_TIMEOUT_SECONDS=240
           readonly CONNECTIVITY_INTERVAL=5
           CONNECTIVITY_ATTEMPTS=$((CONNECTIVITY_TIMEOUT_SECONDS / CONNECTIVITY_INTERVAL))
           CONNECTIVITY_SUCCESS=false
 
           for i in $(seq 1 $CONNECTIVITY_ATTEMPTS); do
+            # IP が割り当て直後に変化するケースへ備え、各ループで Service から再取得
+            REFRESHED_IP=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
+            if [ -n "$REFRESHED_IP" ] && [ "$REFRESHED_IP" != "$LB_IP" ]; then
+              LB_IP=$REFRESHED_IP
+              echo "ℹ️ 最新の LoadBalancer IP を取得: $LB_IP"
+            fi
+
+            if [ -z "$LB_IP" ]; then
+              echo "[$i/$CONNECTIVITY_ATTEMPTS] LoadBalancer IP 未確定のため 5 秒待機"
+              sleep $CONNECTIVITY_INTERVAL
+              continue
+            fi
+
             if timeout 5 bash -c "echo > /dev/tcp/$LB_IP/80" 2>/dev/null; then
               echo "✅ [$i/$CONNECTIVITY_ATTEMPTS] LoadBalancer ポート 80 への接続成功"
               CONNECTIVITY_SUCCESS=true
               break
             fi
+
             echo "[$i/$CONNECTIVITY_ATTEMPTS] LoadBalancer ポート 80 接続待機中... (最大${CONNECTIVITY_TIMEOUT_SECONDS}秒)"
             sleep $CONNECTIVITY_INTERVAL
           done

@@ -1,9 +1,9 @@
-# LoadBalancer Rule の BackendPort が 80 に固定され外部アクセス不能（3回目の再発）
+# LoadBalancer Rule の BackendPort が 80 に固定され外部アクセス不能（3 回目の再発）
 
 **日時**: 2025-11-25  
 **対象リソース**: AKS, Azure LoadBalancer, Ingress Controller  
 **Run ID**: 19663062180  
-**エラー**: LoadBalancer ポート 80 への接続が6分間のリトライでも失敗
+**エラー**: LoadBalancer ポート 80 への接続が 6 分間のリトライでも失敗
 
 ---
 
@@ -24,7 +24,7 @@ Error: Process completed with exit code 1.
 3. ✅ Ingress Controller ヘルスチェック: 成功 (HTTP 200)
 4. ✅ クラスタ内 Service アクセス: 成功 (HTTP 200)
 5. ✅ LoadBalancer IP 割り当て: 完了 (20.18.94.114)
-6. ❌ LoadBalancer ポート 80 への外部接続: **6分間（36回）すべて失敗**
+6. ❌ LoadBalancer ポート 80 への外部接続: **6 分間（36 回）すべて失敗**
 
 ### ネットワーク診断結果
 
@@ -42,13 +42,13 @@ Error: Process completed with exit code 1.
 
 ### LoadBalancer Rule の BackendPort が固定値 80 のまま
 
-| 項目                              | 値              | 期待値       | 状態 |
-| --------------------------------- | --------------- | ------------ | ---- |
-| **Ingress HTTP NodePort**         | **31778**       | -            | ✅   |
-| **Ingress Health Check NodePort** | **30254**       | -            | ✅   |
-| **LoadBalancer Rule BackendPort** | **80** ← 問題！ | **31778**    | ❌   |
-| **LoadBalancer Probe Port**       | **30254**       | **30254**    | ✅   |
-| **結果**                          | -               | 通信不可     | ❌   |
+| 項目                              | 値              | 期待値    | 状態 |
+| --------------------------------- | --------------- | --------- | ---- |
+| **Ingress HTTP NodePort**         | **31778**       | -         | ✅   |
+| **Ingress Health Check NodePort** | **30254**       | -         | ✅   |
+| **LoadBalancer Rule BackendPort** | **80** ← 問題！ | **31778** | ❌   |
+| **LoadBalancer Probe Port**       | **30254**       | **30254** | ✅   |
+| **結果**                          | -               | 通信不可  | ❌   |
 
 ### 発生メカニズム
 
@@ -81,20 +81,20 @@ AKS ノード (VM)
 
 ## 📊 過去の再発履歴
 
-### 1回目: 2025-01-21
+### 1 回目: 2025-01-21
 
 - **ドキュメント**: `2025-01-21-loadbalancer-healthprobe-nodeport-mismatch.md`
 - **対策**: `externalTrafficPolicy: Local` を設定
 - **結果**: 一時的に解決
 
-### 2回目: 2025-11-24
+### 2 回目: 2025-11-24
 
 - **ドキュメント**: `2025-11-24-board-app-deploy-healthprobe-mismatch.md`
 - **問題**: Board App Deploy で Ingress Controller を再作成すると NodePort が変わる
 - **対策**: Board App Deploy で既存 Ingress Controller をスキップする処理を追加
 - **結果**: Board App Deploy 単発実行時は解決したが、Infrastructure Deploy 時の問題は未解決
 
-### 3回目: 2025-11-25 (今回)
+### 3 回目: 2025-11-25 (今回)
 
 - **問題**: Infrastructure Deploy で作成された Ingress Controller の LoadBalancer Rule が不正
 - **根本原因**: Azure Cloud Controller Manager が LoadBalancer Rule を作成する際、NodePort 情報が伝播する前にデフォルト値 80 で作成されてしまう
@@ -141,13 +141,13 @@ for rule in $(echo "$LB_RULES" | jq -r '.[] | @base64'); do
   RULE_NAME=$(_jq '.name')
   FRONTEND_PORT=$(_jq '.frontendPort')
   BACKEND_PORT=$(_jq '.backendPort')
-  
+
   if [ "$FRONTEND_PORT" = "80" ] && [ "$BACKEND_PORT" != "$HTTP_NODEPORT" ]; then
     echo "⚠️ LoadBalancer Rule の BackendPort (HTTP) を修正: $BACKEND_PORT → $HTTP_NODEPORT"
     az network lb rule update --resource-group "$NODE_RG" --lb-name kubernetes \
       --name "$RULE_NAME" --backend-port "$HTTP_NODEPORT"
   fi
-  
+
   if [ "$FRONTEND_PORT" = "443" ] && [ "$BACKEND_PORT" != "$HTTPS_NODEPORT" ]; then
     echo "⚠️ LoadBalancer Rule の BackendPort (HTTPS) を修正: $BACKEND_PORT → $HTTPS_NODEPORT"
     az network lb rule update --resource-group "$NODE_RG" --lb-name kubernetes \
@@ -230,14 +230,63 @@ curl -I "http://${LB_IP}/"
 - Azure Cloud Controller Manager が自動的に LoadBalancer Rule を作成
 - **問題**: Rule 作成時に NodePort 情報が伝播していないと、デフォルト値 (FrontendPort と同じ値) で作成される
 
-### なぜ3回も再発したか
+### なぜ 3 回も再発したか
 
-1. **1回目の対策**: `externalTrafficPolicy: Local` 設定 → **不十分**（Rule 作成タイミングの問題が未解決）
-2. **2回目の対策**: Board App Deploy で Ingress Controller をスキップ → **部分的解決**（Infrastructure Deploy の問題は残存）
-3. **3回目（今回）**: Infrastructure Deploy で作成された LoadBalancer Rule が不正 → **恒久的解決が必要**
+1. **1 回目の対策**: `externalTrafficPolicy: Local` 設定 → **不十分**（Rule 作成タイミングの問題が未解決）
+2. **2 回目の対策**: Board App Deploy で Ingress Controller をスキップ → **部分的解決**（Infrastructure Deploy の問題は残存）
+3. **3 回目（今回）**: Infrastructure Deploy で作成された LoadBalancer Rule が不正 → **恒久的解決が必要**
 
 ### 恒久的解決の必要性
 
 - Azure Cloud Controller Manager の動作タイミングは制御できない
 - Infrastructure Deploy で **必ず LoadBalancer Rule を検証・修正** する処理を追加
 - 冪等性を保証し、何度実行しても正しい状態にする
+
+---
+
+## 🔄 最新発生状況（2025-11-25 Run ID: 19666699476）
+
+### 事象
+
+- `.github/workflows/2-board-app-build-deploy.yml` のデプロイ後疎通確認ステップが再度失敗
+- `LoadBalancer ポート 80 接続待機中...` のリトライ（全 18 回 / 90 秒間）がすべて失敗し、最終的にワークフロー終了
+- LoadBalancer Rule の BackendPort は修正後も正しく `31778` に維持されており、**ルール不一致による失敗ではない**
+
+### 追加で実装した暫定対策
+
+- LoadBalancer Rule 自動修正処理を HTTP ルールのみに限定（443 ルールを触らずに済むよう最小限化）
+- 疎通確認ループを 6 分 → 90 秒へ短縮し、5 秒間隔で TCP 接続チェックを実行
+- 疎通確認時に `kubectl get svc` から実際の LoadBalancer IP を都度取得し直すよう変更し、待機中に IP が付与された場合でも即座に反映できるよう改善
+
+### 暫定対策後も失敗した理由
+
+- 90 秒時点では Azure LoadBalancer のパスがまだ安定化しておらず、HTTP 応答が返らなかった
+- 手元での `Test-NetConnection 20.18.94.114 -Port 80` でも同タイミングでタイムアウトを再現、Ingress 自体は起動済みで AKS 内部アクセスは成功している
+- 既存の 6 分待機は過剰だったが、90 秒では不足するケースが存在することが判明
+
+### 次のアクション案
+
+1. 疎通確認ループを段階待機（例: 180 秒まで段階的に延長）し、ログ出力で実 IP とリトライ回数を可視化
+2. `az network watcher flow-log show` などで LoadBalancer バックエンドへの転送状況を時間軸で確認し、タイミング差異を記録
+3. `kubectl describe svc ingress-nginx-controller -n ingress-nginx` の `Events` をワークフロー内で収集し、IP 付与〜Ready までの経過時間をログ化
+4. そもそも外部待機が不要になるよう、Ingress を `internal` 化した上で Azure Application Gateway / Front Door を利用する構成への移行を検討（長期施策）
+
+### 現時点での教訓
+
+- LoadBalancer Rule の BackendPort 自動修正は効果が確認できたが、**LB が外部から応答するまでの待機時間には余裕を持たせる必要がある**
+- 疎通確認用の IP はステップごとに取得し直すことで確実に最新の IP を使用できるようになった
+- 実際の外部応答が得られるまでの所要時間を時系列で収集し、次回以降の再発防止策（待機時間の最適化、段階的な確認）に活用すべき
+
+### ログサンプル（抜粋）
+
+```
+[deploy] Detected LoadBalancer IP from Service: 20.18.94.114
+[deploy] [1/18] LoadBalancer ポート 80 接続待機中... (最大90秒)
+WARNING: TCP connect to 20.18.94.114:80 failed: TimedOut
+...
+[deploy] [18/18] LoadBalancer ポート 80 接続待機中... (最大90秒)
+WARNING: TCP connect to 20.18.94.114:80 failed: TimedOut
+⚠️ LoadBalancer ポート 80 への接続が確認できませんでしたが、続行します
+```
+
+---
