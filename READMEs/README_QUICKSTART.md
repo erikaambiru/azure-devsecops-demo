@@ -206,7 +206,7 @@ pwsh ./scripts/setup-github-secrets_variables.ps1 -DryRun     # 設定内容の�
 
 もし接続確認が失敗した場合:
 
-1. ワークフローのログで `healthCheckNodePort: 30254` が正しく設定されているか確認
+1. ワークフローのログで `ingress-nginx-controller` Service に割り当てられた `nodePort` と LoadBalancer IP が表示されるか確認
 2. 5-10 分待機後、ワークフローを再実行
 3. それでも失敗する場合は `trouble_docs/2025-01-21-loadbalancer-healthprobe-nodeport-mismatch.md` を参照
 

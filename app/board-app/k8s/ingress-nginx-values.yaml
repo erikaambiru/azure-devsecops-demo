@@ -11,10 +11,6 @@ controller:
     # 参考: trouble_docs/2025-11-25-board-app-lb-dsr-timeout.md
     externalTrafficPolicy: Cluster
 
-    # ヘルスチェック用の固定 NodePort（30000-32767 の範囲で指定）
-    # Cluster モードでも Azure LB が指定ポートを参照するため値は維持する
-    healthCheckNodePort: 30254
-
     # Azure LoadBalancer 用アノテーション
     annotations:
       # ヘルスプローブのパスを明示的に指定
