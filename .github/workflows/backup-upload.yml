@@ -2,7 +2,7 @@ name: 🔄 MySQL Backup Upload (Scheduled)
 
 on:
   schedule:
-    - cron: "0 * * * *"
+    - cron: "0 0 * * 1" # 毎週月曜日 00:00 UTC
   workflow_dispatch:
 
 permissions:
@@ -83,7 +83,7 @@ jobs:
             --name "$BACKUP_CONTAINER_NAME" \
             --auth-mode login \
             --query exists -o tsv || echo "false")
-          
+
           if [ "$EXISTS" != "true" ]; then
             echo "コンテナ $BACKUP_CONTAINER_NAME を作成中..."
             az storage container create \
@@ -157,4 +157,4 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "---" >> $GITHUB_STEP_SUMMARY
           echo "✅ バックアップ実行日時: $(date +'%Y-%m-%d %H:%M:%S %Z')" >> $GITHUB_STEP_SUMMARY
-          echo "🔄 次回定期実行: 1時間ごと" >> $GITHUB_STEP_SUMMARY
+          echo "🔄 次回定期実行: 週1回（毎週月曜日 00:00 UTC）" >> $GITHUB_STEP_SUMMARY
