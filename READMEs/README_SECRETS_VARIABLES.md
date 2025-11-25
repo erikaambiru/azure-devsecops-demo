@@ -2,7 +2,7 @@
 
 ## 1. ルール
 
-- **Secrets** は GitHub Actions からもマスクされるため、クレデンシャルや Subscription ID を格納します。
+- **Secrets** は GitHub Actions からもマスクされるため、Subscription ID を格納します。本来であればその他クレデンシャルもシークレットにすべきですが、今回はデモ用のため Subscription ID 以外は Variables に格納しています。
 - **Variables** は値がログに出力される可能性があるため、低機密情報またはクロスワークフローで共通のパラメーターに使用します。
 - 値の一括投入: `scripts/setup-github-secrets_variables.ps1`（`-Repo` 省略時は `$DefaultRepo` → git remote → 対話入力の順で解決）
 - `AZURE_CLIENT_ID / AZURE_CLIENT_SECRET / AZURE_TENANT_ID / AZURE_SUBSCRIPTION_ID` は `scripts/create-github-actions-sp.ps1` で発行した Service Principal 情報を転記する。ダミー値はデモ確認用であり、本番では必ず再生成する。
@@ -39,12 +39,12 @@
 
 > **補足**: `jobs.json` や `sec_scan_jobs.json` は Secrets 管理には使用していません。
 
-## 4. dummy-secret.txt の注意点
+## 4. dummy-secret.txt
 
 - パス: `app/board-app/public/dummy-secret.txt`
 - 目的: フロントエンド上でダミーの資格情報を公開し、実際の秘密を含めない方針を徹底すること。
 - `App.jsx` の `<a href="/dummy-secret.txt">` から誰でもアクセスできるため、**本物のキーを絶対に配置しない**。
-- README やコメントには「ダミーであり本物ではない」ことを必ず記述済み。
+- **セキュリティスキャンで検知されるかのために格納**
 
 ## 5. 推奨運用
 
