@@ -44,6 +44,10 @@
 
 - すべてのリソースは `infra/main.bicep` と `infra/parameters/*.json` で定義され、`1️⃣ Infrastructure Deploy` ワークフローで Validate → What-If → Deploy → **Azure Policy 適用** (`infra/policy.bicep` + `parameters/policy-dev.parameters.json`) の順に実行されます。
 - **Azure Policy によるガバナンス自動化**: タグ強制、リソース種別制限、SKU 制限、リージョン制限などのコンプライアンスルールを IaC で定義し、自動適用。ポリシー違反リソースの検出・修正を CI/CD に組み込むことで、組織のセキュリティ基準を開発フロー全体で担保します。
+- **共通タグの自動付与**: Bicep の `tags` パラメーターで指定した `environment: dev` などの値を `union()` で集約し、展開された Azure リソース全体に自動で反映しています。Azure ポータル上でも下図のように確認できます。
+
+![environment=dev タグ](READMEs/imgs/Resouce_tags.png)
+
 - コスト最適化のため、AKS ノード (Standard_B2s)、Container Apps (Consumption)、VM (Standard_B1ms)、ストレージ (Standard_LRS + Cool) など **低コスト SKU** を標準採用しています。
 - Security Scan ワークフローでは GitGuardian の API キーベース検査も有効化しており、`vars.GITGUARDIAN_API_KEY` が設定されている場合は 400+ パターンで履歴全体のシークレット検出を実施します。
 - `app/board-app/public/dummy-secret.txt` は UI からリンクされるダミー資格情報であり、本物の機密情報ではありません。

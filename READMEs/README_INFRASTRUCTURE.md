@@ -19,6 +19,12 @@
 - すべての入力値は `infra/parameters/main-dev.parameters.json` に格納し、ワークフローから `--parameters @file` + 一部上書きで利用。
 - ハードコード禁止項目 (VNet CIDR、AKS DNS、VM 管理者、MySQL 資格情報等) もすべて JSON に退避。
 
+### 1.2 タグ付与の確認
+
+- Bicep の `tags` パラメーターで指定した `environment: dev` がデプロイ後に Azure ポータル上でも確認できることを示すスクリーンショットです。
+
+![environment=dev タグの適用確認](./imgs/Resouce_tags.png)
+
 ## 2. ネットワーク & ログ設計
 
 ```
