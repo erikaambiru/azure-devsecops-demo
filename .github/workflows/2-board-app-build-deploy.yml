@@ -1538,14 +1538,25 @@ jobs:
           echo ""
           if [ "$FIXED_COUNT" -gt 0 ]; then
             echo "✅ LoadBalancer Rule を ${FIXED_COUNT} 件修正しました"
-            echo "   修正内容が反映されるまで 15 秒待機します..."
-            sleep 15
+            echo "   修正内容が反映されるまで 60 秒待機します..."
+            sleep 60
             
             echo ""
             echo "📊 修正後の LoadBalancer Rule:"
             az network lb rule list --resource-group "$NODE_RG" --lb-name "$LB_NAME" \
               --query "[?frontendPort==\`80\` || frontendPort==\`443\`]" -o json | \
               jq -r '.[] | "  - \(.name): FrontendPort=\(.frontendPort), BackendPort=\(.backendPort)"'
+            
+            echo ""
+            echo "🔍 LoadBalancer の反映を待機中..."
+            for i in $(seq 1 12); do
+              if timeout 3 bash -c "echo > /dev/tcp/localhost/80" 2>/dev/null; then
+                echo "   ✅ [$i/12] LoadBalancer が応答を開始しました"
+                break
+              fi
+              echo "   ⏳ [$i/12] LoadBalancer の反映待機中... (5秒間隔)"
+              sleep 5
+            done
           else
             echo "✅ LoadBalancer Rule は正しく設定されています（修正不要）"
           fi
