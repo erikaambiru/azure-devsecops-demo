@@ -62,11 +62,11 @@
 
 ## 4. `🔄 MySQL Backup Upload (Scheduled)` (`.github/workflows/backup-upload.yml`)
 
-- **トリガー**: `schedule` (毎時), `workflow_dispatch`
+- **トリガー**: `schedule` (週1回・毎週月曜日 00:00 UTC), `workflow_dispatch`
 - **処理内容**:
   - Storage Account 名を prefix から解決し、バックアップ用コンテナを作成/検証
   - ワークフロー内で一時的な `mysql-backup.sh` を生成し、その場で `az vm run-command invoke` から VM 上で実行（専用スクリプトはリポジトリに常設していません）
-  - VM の System Assigned Identity と AzCopy MSI 認証を使って Blob へアップロード
+  - VM 上で Azure CLI を使用してコンテナ存在確認、AzCopy MSI 認証で Blob へアップロード（Azure CLI は `scripts/mysql-init.sh` で自動インストール）
   - Step Summary にバックアップファイル名と Blob URL を記載
 
 ## 5. `🧹 Cleanup Workflow Runs (Scheduled)` (`.github/workflows/cleanup-workflows.yml`)

@@ -59,9 +59,10 @@ VNet 10.0.0.0/16
 
 - `scripts/mysql-init.sh` を VM 拡張 (`CustomScript`) で実行し、以下を自動化。
   - apt リポジトリ再試行、mysql-server インストール (fallback 付き)、`bind-address` を 0.0.0.0 に変更
+  - Azure CLI のインストール（既存の場合はスキップ。バックアップワークフローでコンテナ操作に必要）
   - root とアプリユーザーの作成 (`mysqlRootPassword`, `mysqlAppUsername`, `mysqlAppPassword`)
   - 外部接続許可 & サービス再起動
-- GitHub Actions の `backup-upload` では VM の Managed Identity + AzCopy (MSI) で `mysqldump` を Storage にアップロード。
+- GitHub Actions の `backup-upload` では VM の Managed Identity + Azure CLI + AzCopy (MSI) で `mysqldump` を Storage にアップロード（週1回・毎週月曜日）。
 
 ## 6. Azure Policy
 
