@@ -60,6 +60,12 @@
 - **成果物**: `sbom-admin.cdx.json`, SARIF, `admin-app-image` アーカイブ。
 - **ポイント**: ビルドとデプロイを 1 つのワークフローに統合し、管理アプリを Container Apps へデプロイします。
 
+### Admin App ワークフロー実行例
+
+![Admin App Build & Deploy ワークフロー](./imgs/bbs-demo-ACA_Deploy_After_CodeScan.png)
+
+> コードスキャン (Gitleaks / Trivy) を先行させてから Docker Build → ACR プッシュ → Container Apps 更新へと進む手順が確認できる画面例です。失敗時はスキャン段階で止まるため、脆弱性を修正してから再実行すると良いでしょう。
+
 ## 4. `🔄 MySQL Backup Upload (Scheduled)` (`.github/workflows/backup-upload.yml`)
 
 - **トリガー**: `schedule` (週 1 回・毎週月曜日 00:00 UTC), `workflow_dispatch`
