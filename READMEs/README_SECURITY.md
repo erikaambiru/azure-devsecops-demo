@@ -37,6 +37,12 @@
 
 > セキュリティスキャンの結果は GitHub Security タブに統合され、CodeQL・Trivy・Gitleaks・GitGuardian の検出が一元管理されます。SARIF 形式で自動アップロードされるため、脆弱性の追跡と修正が容易になります。
 
+### Security Scan ワークフロー実行例
+
+![Security Scan ワークフロー](./imgs/WorkFlow-SecurityScan.png)
+
+> セキュリティスキャンワークフローは複数のジョブで構成され、CodeQL・Gitleaks・GitGuardian・Trivy による多層スキャンを実行します。検出結果は Step Summary で一覧表示され、SARIF 形式で GitHub Security タブへ自動統合されます。
+
 ## 4. ログ & モニタリング
 
 - `main.bicep` で以下の Diagnostic Settings を構成し、`logAnalytics.outputs.id` に送信:

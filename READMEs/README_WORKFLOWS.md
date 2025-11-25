@@ -90,7 +90,7 @@
 
 ### Security Scan ワークフロー実行例
 
-![Security Scan ワークフロー](imgs/WorkFlow-ScurityScan.png)
+![Security Scan ワークフロー](./imgs/WorkFlow-SecurityScan.png)
 
 > セキュリティスキャンは複数のジョブで構成され、SARIF 形式で GitHub Security タブへ自動統合されます。検出結果は Step Summary で一覧表示されます。
 
