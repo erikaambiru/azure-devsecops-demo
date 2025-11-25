@@ -22,4 +22,4 @@
 
 - 参考ドキュメント: [Azure Load Balancer のトラブルシューティング](https://learn.microsoft.com/azure/load-balancer/load-balancer-troubleshoot)
 - 再発した場合は `externalTrafficPolicy` が意図せず `Local` に戻っていないか、Helm values 上書き設定を確認する。
-- タグ: グレートモス
+- タグ: グレートモス (Great Moth)
