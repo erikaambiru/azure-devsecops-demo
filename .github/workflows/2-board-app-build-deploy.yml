@@ -1501,25 +1501,50 @@ jobs:
             _jq() {
               echo "$rule" | base64 --decode | jq -r "$1"
             }
-            
+
             RULE_NAME=$(_jq '.name')
             FRONTEND_PORT=$(_jq '.frontendPort')
             BACKEND_PORT=$(_jq '.backendPort')
-            
+            DISABLE_OUTBOUND_SNAT=$(_jq '.disableOutboundSnat')
+            ENABLE_FLOATING_IP=$(_jq '.enableFloatingIP')
+
+            # 必要な修正内容を蓄積。バックエンドポートの補正に加え、DSR 無効化(SNAT有効化)を徹底する
+            NEEDS_UPDATE=false
+            UPDATE_ARGS=()
+
             if [ "$FRONTEND_PORT" = "80" ] && [ "$BACKEND_PORT" != "$HTTP_NODEPORT" ]; then
               echo ""
               echo "⚠️ HTTP Rule の BackendPort が不一致:"
               echo "   Rule: $RULE_NAME"
               echo "   現在の BackendPort: $BACKEND_PORT"
               echo "   正しい NodePort: $HTTP_NODEPORT"
+              UPDATE_ARGS+=(--backend-port "$HTTP_NODEPORT")
+              NEEDS_UPDATE=true
+            fi
+
+            if [ "$DISABLE_OUTBOUND_SNAT" = "true" ]; then
+              echo ""
+              echo "⚠️ $RULE_NAME は disableOutboundSnat=true のままです (GitHub Actions ランナーからの応答が DSR で破棄される要因)。"
+              UPDATE_ARGS+=(--disable-outbound-snat false)
+              NEEDS_UPDATE=true
+            fi
+
+            if [ "$ENABLE_FLOATING_IP" = "true" ]; then
+              echo ""
+              echo "⚠️ $RULE_NAME は Floating IP (DSR) が有効です。Pod 側でループバック設定を入れていないため無効化します。"
+              UPDATE_ARGS+=(--floating-ip false)
+              NEEDS_UPDATE=true
+            fi
+
+            if [ "$NEEDS_UPDATE" = true ]; then
               echo "   🔧 LoadBalancer Rule を修正中..."
               az network lb rule update \
                 --resource-group "$NODE_RG" \
                 --lb-name "$LB_NAME" \
                 --name "$RULE_NAME" \
-                --backend-port "$HTTP_NODEPORT" \
+                "${UPDATE_ARGS[@]}" \
                 --output none
-              echo "   ✅ 修正完了: BackendPort → $HTTP_NODEPORT"
+              echo "   ✅ 修正完了: $(printf '%s ' "${UPDATE_ARGS[@]}")"
               FIXED_COUNT=$((FIXED_COUNT + 1))
             fi
           done
