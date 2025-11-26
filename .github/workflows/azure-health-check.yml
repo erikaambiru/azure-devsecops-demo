@@ -505,6 +505,125 @@ jobs:
           fi
 
       # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      # Step 4.6.1: Load Balancer BackendPort 確認・補正
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      # 問題: AKS 起動後に LB Rule の BackendPort が 80/443 にリセットされることがある
+      #       本来は Ingress Controller の NodePort (例: 32573/31489) が必要
+      # 参考: trouble_docs/2025-11-26-subnet-nsg-blocking-http.md
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      - name: Load Balancer BackendPort を NodePort に修正
+        id: lb_backend_port_fix
+        run: |
+          set -euo pipefail
+
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🔍 Load Balancer BackendPort 確認"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "📖 説明:"
+          echo "  AKS 起動後に LB Rule の BackendPort が 80/443 にリセットされることがあります"
+          echo "  Ingress Controller は NodePort で公開されるため、BackendPort を NodePort に合わせる必要があります"
+          echo ""
+
+          # ノードリソースグループを取得
+          NODE_RG=$(az aks show \
+            --resource-group "$RESOURCE_GROUP_NAME" \
+            --name "$AKS_CLUSTER_NAME" \
+            --query nodeResourceGroup -o tsv)
+
+          echo "ノードリソースグループ: $NODE_RG"
+
+          # Load Balancer 名を取得
+          LB_NAME=$(az network lb list --resource-group "$NODE_RG" --query "[0].name" -o tsv 2>/dev/null || echo "kubernetes")
+          echo "Load Balancer: $LB_NAME"
+
+          # Kubernetes から実際の NodePort を取得
+          NODEPORT_HTTP=$(kubectl get svc -n ingress-nginx ingress-nginx-controller \
+            -o jsonpath='{.spec.ports[?(@.port==80)].nodePort}' 2>/dev/null || echo "")
+          NODEPORT_HTTPS=$(kubectl get svc -n ingress-nginx ingress-nginx-controller \
+            -o jsonpath='{.spec.ports[?(@.port==443)].nodePort}' 2>/dev/null || echo "")
+
+          if [ -z "$NODEPORT_HTTP" ] || [ -z "$NODEPORT_HTTPS" ]; then
+            echo "⚠️ Ingress Controller の NodePort が取得できません"
+            echo "   Ingress Controller がまだ起動していない可能性があります"
+            echo "backend_port_fixed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo ""
+          echo "📊 Ingress Controller の NodePort:"
+          echo "  - HTTP  (80)  → NodePort: $NODEPORT_HTTP"
+          echo "  - HTTPS (443) → NodePort: $NODEPORT_HTTPS"
+          echo ""
+
+          # LB Rule を取得
+          LB_RULES=$(az network lb rule list --resource-group "$NODE_RG" --lb-name "$LB_NAME" \
+            --query "[?frontendPort==\`80\` || frontendPort==\`443\`].{name:name, frontendPort:frontendPort, backendPort:backendPort}" \
+            -o json 2>/dev/null || echo "[]")
+
+          if [ -z "$LB_RULES" ] || [ "$LB_RULES" = "[]" ]; then
+            echo "⚠️ HTTP/HTTPS の LoadBalancer Rule が見つかりません"
+            echo "backend_port_fixed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "📊 現在の LoadBalancer Rule:"
+          echo "$LB_RULES" | jq -r '.[] | "  - \(.name): FrontendPort=\(.frontendPort), BackendPort=\(.backendPort)"'
+          echo ""
+
+          # BackendPort の修正が必要かチェック
+          FIXED_COUNT=0
+
+          for rule in $(echo "$LB_RULES" | jq -r '.[] | @base64'); do
+            _jq() {
+              echo "$rule" | base64 --decode | jq -r "$1"
+            }
+
+            RULE_NAME=$(_jq '.name')
+            FRONTEND_PORT=$(_jq '.frontendPort')
+            BACKEND_PORT=$(_jq '.backendPort')
+
+            # 期待される NodePort を決定
+            if [ "$FRONTEND_PORT" = "80" ]; then
+              EXPECTED_BACKEND=$NODEPORT_HTTP
+            elif [ "$FRONTEND_PORT" = "443" ]; then
+              EXPECTED_BACKEND=$NODEPORT_HTTPS
+            else
+              continue
+            fi
+
+            # BackendPort が期待値と異なる場合は修正
+            if [ "$BACKEND_PORT" != "$EXPECTED_BACKEND" ]; then
+              echo "⚠️ $RULE_NAME: BackendPort が不正です"
+              echo "   現在: $BACKEND_PORT → 期待: $EXPECTED_BACKEND"
+              echo "🔧 BackendPort を修正中..."
+
+              az network lb rule update \
+                --resource-group "$NODE_RG" \
+                --lb-name "$LB_NAME" \
+                --name "$RULE_NAME" \
+                --backend-port "$EXPECTED_BACKEND" \
+                --output none
+
+              echo "✅ 修正完了: BackendPort=$EXPECTED_BACKEND"
+              FIXED_COUNT=$((FIXED_COUNT + 1))
+            else
+              echo "✅ $RULE_NAME: BackendPort=$BACKEND_PORT (正常)"
+            fi
+          done
+
+          echo ""
+          if [ "$FIXED_COUNT" -gt 0 ]; then
+            echo "🔄 $FIXED_COUNT 件の LB ルールの BackendPort を修正しました"
+            echo "⏳ 設定反映を待機中（15秒）..."
+            sleep 15
+            echo "backend_port_fixed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "✅ すべての LB ルールの BackendPort は正常です"
+            echo "backend_port_fixed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       # Step 4.7: サブネット NSG 確認・補正
       # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       - name: サブネット NSG の HTTP/HTTPS 許可ルールを確認・補正
