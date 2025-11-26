@@ -86,13 +86,13 @@ trouble_docs/       # トラブルシューティング履歴
 
 > 📅 計測日: 2025-11-26 | GitHub-hosted runner (ubuntu-latest)
 
-| ワークフロー | 実行時間 |
-|-------------|---------|
-| 1️⃣ Infrastructure Deploy | 約 5〜11 分 |
-| 2️⃣ Board App Build & Deploy | 約 4〜8 分 |
-| 2️⃣ Admin App Build & Deploy | 約 5 分 |
-| 🔐 Security Scan | 約 2 分 |
-| 🔄 Azure Health Check | 約 1〜10 分 |
+| ワークフロー                | 実行時間    |
+| --------------------------- | ----------- |
+| 1️⃣ Infrastructure Deploy    | 約 5〜11 分 |
+| 2️⃣ Board App Build & Deploy | 約 4〜8 分  |
+| 2️⃣ Admin App Build & Deploy | 約 5 分     |
+| 🔐 Security Scan            | 約 2 分     |
+| 🔄 Azure Health Check       | 約 1〜10 分 |
 
 **📦 フルデプロイ合計: 約 15〜20 分**（Board/Admin は並列実行）
 
