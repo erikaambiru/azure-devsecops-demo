@@ -17,7 +17,7 @@
 2. **MySQL VM が自動停止される（`deallocated`）**
 3. 停止後に Board App ワークフローを実行しても接続エラー
 4. DNS 解決失敗や LoadBalancer IP 変更で疎通不可
-5. **Board App で「MySQL永続化 API からの取得に失敗しました」エラー**
+5. **Board App で「MySQL 永続化 API からの取得に失敗しました」エラー**
 
 ---
 
