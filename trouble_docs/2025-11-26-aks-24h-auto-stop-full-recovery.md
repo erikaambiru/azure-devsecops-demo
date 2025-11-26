@@ -13,13 +13,13 @@
 
 ### 発生する問題一覧
 
-| # | 問題 | 症状 | 自動修正 |
-|---|------|------|---------|
-| 1 | AKS/VM 停止 | クラスター・DB にアクセス不可 | ✅ |
-| 2 | LB BackendPort リセット | HTTP 000 タイムアウト | ✅ |
-| 3 | サブネット NSG ルール欠落 | 外部からアクセス不可 | ✅ |
-| 4 | externalTrafficPolicy 不整合 | DSR 関連の接続問題 | ✅ |
-| 5 | MySQL 接続エラー | API で DB 取得失敗 | ✅ |
+| #   | 問題                         | 症状                          | 自動修正 |
+| --- | ---------------------------- | ----------------------------- | -------- |
+| 1   | AKS/VM 停止                  | クラスター・DB にアクセス不可 | ✅       |
+| 2   | LB BackendPort リセット      | HTTP 000 タイムアウト         | ✅       |
+| 3   | サブネット NSG ルール欠落    | 外部からアクセス不可          | ✅       |
+| 4   | externalTrafficPolicy 不整合 | DSR 関連の接続問題            | ✅       |
+| 5   | MySQL 接続エラー             | API で DB 取得失敗            | ✅       |
 
 ---
 
@@ -82,6 +82,7 @@ gh workflow run azure-health-check.yml
 ```
 
 **確認コマンド**:
+
 ```bash
 # NodePort 確認
 kubectl get svc -n ingress-nginx ingress-nginx-controller
@@ -105,6 +106,7 @@ Azure NSG の評価順序:
 ```
 
 **確認コマンド**:
+
 ```bash
 # サブネット NSG のルール確認
 SUBNET_ID=$(az aks show -g <RG> -n <AKS> --query "agentPoolProfiles[0].vnetSubnetId" -o tsv)
