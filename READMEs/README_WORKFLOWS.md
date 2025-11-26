@@ -122,7 +122,27 @@
   - デフォルトでは問題検出時の通知のみ。自動再デプロイを有効化するには `auto-redeploy` ジョブの `if: false` を変更
   - 関連ドキュメント: `trouble_docs/2025-11-26-aks-24h-auto-stop-recovery.md`
 
-## 8. 推奨実行順序
+## 8. 直近の実行時間（参考値）
+
+> 📅 計測日: 2025-11-26 | 環境: GitHub-hosted runner (ubuntu-latest)
+
+| ワークフロー | 平均実行時間 | 最短 | 最長 | 備考 |
+|-------------|-------------|------|------|------|
+| 1️⃣ Infrastructure Deploy | **約 5〜11 分** | 4.8 分 | 10.9 分 | 初回 or リソース再作成時は長め |
+| 2️⃣ Board App Build & Deploy | **約 4〜8 分** | 4.3 分 | 8.3 分 | Docker Build + AKS Deploy 込み |
+| 2️⃣ Admin App Build & Deploy | **約 5 分** | 4.7 分 | 5.1 分 | Container Apps へのデプロイ |
+| 🔐 Security Scan | **約 2 分** | 1.8 分 | 2.0 分 | CodeQL + Trivy + Gitleaks |
+| 🔄 Azure Health Check & Recovery | **約 1〜10 分** | 1.2 分 | 9.9 分 | 停止状態からの復旧時は長め |
+| 🔄 MySQL Backup Upload | **約 2〜3 分** | - | - | VM 経由のバックアップ転送 |
+| 🧹 Cleanup Workflow Runs | **約 1 分** | - | - | 古い実行履歴の削除 |
+
+### 実行時間の変動要因
+
+- **Infrastructure Deploy**: 新規作成 vs 更新、AKS ノードプール起動状態
+- **Board App**: Docker キャッシュ有無、AKS の状態（起動中 or 停止中）
+- **Health Check**: AKS/VM が停止中の場合、起動待機で +5〜8 分
+
+## 9. 推奨実行順序
 
 1. `1️⃣ Infrastructure Deploy`
 2. `2️⃣ Board App Build & Deploy`
@@ -132,7 +152,7 @@
 6. `🧹 Cleanup Workflow Runs` (定期)
 7. `🔄 Azure Health Check & Recovery` (手動 / 必要に応じて定期化)
 
-## 9. 再実行性と手動トリガー入力
+## 10. 再実行性と手動トリガー入力
 
 - `workflow_dispatch` を備えるワークフローはすべて単体で再実行できます。`workflow_run` トリガー（例: 1️⃣ の完了後に 2️⃣ が走る設定）は「直前が success のときだけ」発火する条件を付けているため、個別再実行が他ワークフローへ連鎖することはありません。
 - `1️⃣ Infrastructure Deploy` は追加入力なしで `workflow_dispatch` が可能です。Validate/What-If/Deploy は常に同じパラメーターを読み込むため、同一コミットでも安全に再適用できます。
@@ -141,7 +161,7 @@
 - `🔄 MySQL Backup Upload` と `🧹 Cleanup Workflow Runs` も `workflow_dispatch` から即時実行できます。定期実行の待ち時間なしで挙動を確認したい場合は手動トリガーを使ってください。
 - `🔄 Azure Health Check & Recovery` は AKS/VM が Azure Policy により停止された場合に手動で実行します。AKS/VM を自動起動し、VM 復旧時は board-api Pod も自動再起動します。
 
-## 10. トラブルシューティングヒント
+## 11. トラブルシューティングヒント
 
 - ワークフローエラー時は `trouble_docs/*.md` に過去の事例があります。
 - AKS が 24 時間ポリシーで停止される環境では `trouble_docs/2025-11-26-aks-24h-auto-stop-recovery.md` を参照してください。
