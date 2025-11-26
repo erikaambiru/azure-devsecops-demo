@@ -4,16 +4,37 @@
 
 ### 1.1 必須ツール
 
-- **Visual Studio Code**: コード編集・IaC 管理・k8s 操作の統合環境。Windows: `winget install Microsoft.VisualStudioCode`
-- **Git**: リポジトリクローンに必要。`git --version` で確認。Windows: `winget install Git.Git`
-- **Azure CLI** (v2.60+): `az --version` で確認。Windows: `winget install Microsoft.AzureCLI`。公式手順: <https://learn.microsoft.com/cli/azure/install-azure-cli-windows>
-- **kubectl**: AKS 操作に必須。`kubectl version --client` で確認。インストール: `az aks install-cli` または `winget install Kubernetes.kubectl`
-- **kubelogin**: AKS 認証プラグイン。kubectl と同時に `az aks install-cli` でインストール済み
-- **GitHub CLI (gh)**: リポジトリ変数/シークレット登録に利用。`gh --version` で確認。Windows: `winget install GitHub.cli`。初回: `gh auth login` で認証。公式手順: <https://cli.github.com/manual/installation>
-- **PowerShell 7 以降**: すべての補助スクリプト (`scripts/*.ps1`) で使用。`$PSVersionTable.PSVersion` で確認。Windows: `winget install Microsoft.PowerShell`
-- **Node.js 20 系 + npm**: `app/board-app` / `app/board-api` をローカルでビルド・テストする際に利用。`node -v` / `npm -v` で確認し、<https://nodejs.org/en/download> から LTS をインストール。
-- **Python 3.10+**: `app/admin-app` の Flask サーバーをローカル実行・検証する際に利用。`python --version` で確認。`pip install -r app/admin-app/requirements.txt` を実行できる環境を整備してください。
-- **Docker Desktop**: コンテナビルドをローカル再現する際に必須。`docker version` で確認。WSL2 ベースのバックエンドを推奨。
+> 💡 **ローカル開発しない場合**: GitHub Actions でビルド・デプロイするだけなら、Node.js / Python / Docker Desktop は不要です。
+
+#### ✅ 必須（全員）
+
+| ツール | 用途 | 確認コマンド | インストール |
+|--------|------|-------------|-------------|
+| **Git** | リポジトリクローン | `git --version` | `winget install Git.Git` |
+| **Azure CLI** (v2.60+) | Azure 操作 | `az --version` | `winget install Microsoft.AzureCLI` |
+| **GitHub CLI (gh)** | Secrets/Variables 登録 | `gh --version` | `winget install GitHub.cli` |
+| **PowerShell 7+** | スクリプト実行 | `$PSVersionTable.PSVersion` | `winget install Microsoft.PowerShell` |
+
+#### ✅ AKS 操作時に必要
+
+| ツール | 用途 | 確認コマンド | インストール |
+|--------|------|-------------|-------------|
+| **kubectl** | AKS 操作 | `kubectl version --client` | `az aks install-cli` |
+| **kubelogin** | AKS 認証 | （kubectl と同時にインストール） | `az aks install-cli` |
+
+#### 📝 ローカル開発時のみ必要
+
+| ツール | 用途 | 確認コマンド | インストール |
+|--------|------|-------------|-------------|
+| **Node.js 20 系 + npm** | board-app / board-api 開発 | `node -v` / `npm -v` | [nodejs.org](https://nodejs.org/) |
+| **Python 3.10+** | admin-app (Flask) 開発 | `python --version` | [python.org](https://www.python.org/) |
+| **Docker Desktop** | コンテナビルド | `docker version` | [docker.com](https://www.docker.com/) |
+
+#### 🎨 推奨（あると便利）
+
+| ツール | 用途 |
+|--------|------|
+| **Visual Studio Code** | コード編集・IaC 管理・k8s 操作の統合環境 |
 
 ### 1.2 推奨 VS Code 拡張機能
 
