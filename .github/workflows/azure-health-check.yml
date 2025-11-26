@@ -356,6 +356,98 @@ jobs:
           kubectl get svc -n ingress-nginx
 
       # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      # Step 4.5: Azure Load Balancer DSR 設定確認・補正
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      - name: Azure Load Balancer DSR 設定を確認・補正
+        id: lb_dsr_check
+        run: |
+          set -euo pipefail
+
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🔍 Azure Load Balancer DSR 設定確認"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+          # ノードリソースグループを取得
+          NODE_RG=$(az aks show \
+            --resource-group "$RESOURCE_GROUP_NAME" \
+            --name "$AKS_CLUSTER_NAME" \
+            --query nodeResourceGroup -o tsv)
+
+          echo "ノードリソースグループ: $NODE_RG"
+
+          # Load Balancer 名を取得
+          LB_NAME=$(az network lb list --resource-group "$NODE_RG" --query "[0].name" -o tsv 2>/dev/null || echo "kubernetes")
+          echo "Load Balancer: $LB_NAME"
+
+          # HTTP/HTTPS ルールを取得
+          LB_RULES=$(az network lb rule list --resource-group "$NODE_RG" --lb-name "$LB_NAME" \
+            --query "[?frontendPort==\`80\` || frontendPort==\`443\`]" -o json 2>/dev/null || echo "[]")
+
+          if [ -z "$LB_RULES" ] || [ "$LB_RULES" = "[]" ]; then
+            echo "⚠️ LoadBalancer Rule が見つかりません"
+            echo "dsr_fixed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo ""
+          echo "📊 現在の LoadBalancer Rule:"
+          echo "$LB_RULES" | jq -r '.[] | "  - \(.name): FloatingIP=\(.enableFloatingIP), DisableOutboundSnat=\(.disableOutboundSnat)"'
+
+          # DSR 設定を確認・補正
+          FIXED_COUNT=0
+
+          for rule in $(echo "$LB_RULES" | jq -r '.[] | @base64'); do
+            _jq() {
+              echo "$rule" | base64 --decode | jq -r "$1"
+            }
+
+            RULE_NAME=$(_jq '.name')
+            DISABLE_OUTBOUND_SNAT=$(_jq '.disableOutboundSnat')
+            ENABLE_FLOATING_IP=$(_jq '.enableFloatingIP')
+
+            NEEDS_UPDATE=false
+            UPDATE_ARGS=()
+
+            # disableOutboundSnat=true の場合は修正（GitHub Actions からの応答が DSR で破棄される）
+            if [ "$DISABLE_OUTBOUND_SNAT" = "true" ]; then
+              echo ""
+              echo "⚠️ $RULE_NAME は disableOutboundSnat=true です（DSR 有効）"
+              UPDATE_ARGS+=(--disable-outbound-snat false)
+              NEEDS_UPDATE=true
+            fi
+
+            # Floating IP (DSR) が有効な場合は無効化
+            if [ "$ENABLE_FLOATING_IP" = "true" ]; then
+              echo "⚠️ $RULE_NAME は Floating IP (DSR) が有効です"
+              UPDATE_ARGS+=(--floating-ip false)
+              NEEDS_UPDATE=true
+            fi
+
+            if [ "$NEEDS_UPDATE" = true ]; then
+              echo "🔧 LoadBalancer Rule を修正中: $RULE_NAME"
+              az network lb rule update \
+                --resource-group "$NODE_RG" \
+                --lb-name "$LB_NAME" \
+                --name "$RULE_NAME" \
+                "${UPDATE_ARGS[@]}" \
+                --output none
+              echo "✅ 修正完了: $(printf '%s ' "${UPDATE_ARGS[@]}")"
+              FIXED_COUNT=$((FIXED_COUNT + 1))
+            fi
+          done
+
+          echo ""
+          if [ "$FIXED_COUNT" -gt 0 ]; then
+            echo "🔄 $FIXED_COUNT 件の LB ルールを修正しました"
+            echo "⏳ 設定反映を待機中（30秒）..."
+            sleep 30
+            echo "dsr_fixed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "✅ すべての LB ルールは正常な設定です（DSR 無効）"
+            echo "dsr_fixed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       # Step 5: Board App 状態確認
       # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
       - name: Board App 状態を確認
