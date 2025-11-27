@@ -1020,14 +1020,12 @@ jobs:
             
             # 再デプロイ判定
             if [ "$NEEDS_REDEPLOY" = "true" ]; then
-              echo "### ⚠️ 再デプロイ推奨"
+              echo "### 🔄 自動再デプロイ実行中"
               echo ""
-              echo "以下のワークフローを実行してください："
+              echo "AKS/VM の復旧を検知したため、**Board App デプロイワークフローを自動トリガー**しました。"
               echo ""
-              echo "1. **2️⃣ Board App Build & Deploy** ワークフローを手動実行"
-              echo "2. または下のリンクから実行："
-              echo ""
-              echo "[▶️ Board App デプロイを実行](https://github.com/${{ github.repository }}/actions/workflows/2-board-app-build-deploy.yml)"
+              echo "- 📋 デプロイ状況は [Actions](https://github.com/${{ github.repository }}/actions/workflows/2-board-app-build-deploy.yml) で確認できます"
+              echo "- ⏱️ 完了まで 10〜15 分程度かかります"
             else
               echo "### ✅ すべて正常"
               echo ""
