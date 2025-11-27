@@ -336,6 +336,39 @@ chmod +x ./scripts/setup-github-secrets_variables.sh
 
 ## 6. IaC (インフラ) デプロイ
 
+### ⚠️ ワークフローが表示されない場合
+
+新規リポジトリやフォーク直後は、**Actions タブにワークフロー一覧が表示されない**ことがあります。
+これは GitHub がワークフローファイルをまだインデックス（認識）していないためです。
+
+**解決方法**:
+
+1. **ブラウザで Actions タブを開く** → 「I understand my workflows, go ahead and enable them」ボタンが表示されたらクリック
+2. **それでも表示されない場合**: ワークフローファイルに軽微な変更を加えてプッシュ
+
+```powershell
+# ワークフローファイルにコメントを追加してプッシュ（強制的に認識させる）
+Add-Content -Path ".github/workflows/1-infra-deploy.yml" -Value "`n# trigger workflow registration"
+git add .github/workflows/1-infra-deploy.yml
+git commit -m "chore: ワークフロー登録をトリガー"
+git push
+```
+
+3. 数秒〜1 分待ってからブラウザをリロード（F5）すると、左側にワークフロー一覧が表示されます
+
+**確認コマンド（GitHub CLI）**:
+
+```powershell
+# ワークフローが認識されているか確認
+gh workflow list --repo <owner>/<repo>
+
+# 認識されていれば以下のように表示される
+# NAME                          STATE   ID
+# 1️⃣ Infrastructure Deploy      active  123456789
+```
+
+---
+
 1. GitHub Actions の `1️⃣ Infrastructure Deploy` を手動実行するか、`infra/` へ push して自動トリガーします。
 2. このワークフローは以下を順番に実施します。
    - Service Principal への追加権限チェック
