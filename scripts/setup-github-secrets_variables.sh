@@ -11,10 +11,17 @@
 
 set -e
 
-# --- 設定値(必要に応じて編集) ---
-DEFAULT_REPO="aktsmm/ContainerApp-demo2"
+# ============================================================
+# 📝 設定値（必須：必ず編集してください）
+# ============================================================
 
-# scripts/create-github-actions-sp.sh の出力値を転記する
+# 自分の GitHub リポジトリを設定（例: "your-username/your-repo"）
+DEFAULT_REPO="your-username/your-repo"
+
+# ============================================================
+# 🔐 Azure 認証情報（必須）
+# scripts/create-github-actions-sp.sh の出力値を転記してください
+# ============================================================
 AZURE_SUBSCRIPTION_ID="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 AZURE_CLIENT_ID="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 AZURE_CLIENT_SECRET="xxx~xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
@@ -52,6 +59,61 @@ GITGUARDIAN_API_KEY=""
 
 DRY_RUN=false
 REPO=""
+
+# 必須設定のバリデーション（プレースホルダーチェック）
+validate_required_settings() {
+    local missing_settings=()
+    local placeholder_guid="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    local placeholder_secret="xxx~xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    local placeholder_repo="your-username/your-repo"
+
+    # リポジトリのチェック
+    if [[ "$DEFAULT_REPO" == "$placeholder_repo" ]]; then
+        missing_settings+=("DEFAULT_REPO")
+    fi
+
+    # Azure 認証情報のチェック
+    if [[ "$AZURE_SUBSCRIPTION_ID" == "$placeholder_guid" ]]; then
+        missing_settings+=("AZURE_SUBSCRIPTION_ID")
+    fi
+    if [[ "$AZURE_CLIENT_ID" == "$placeholder_guid" ]]; then
+        missing_settings+=("AZURE_CLIENT_ID")
+    fi
+    if [[ "$AZURE_CLIENT_SECRET" == "$placeholder_secret" ]]; then
+        missing_settings+=("AZURE_CLIENT_SECRET")
+    fi
+    if [[ "$AZURE_TENANT_ID" == "$placeholder_guid" ]]; then
+        missing_settings+=("AZURE_TENANT_ID")
+    fi
+
+    if [[ ${#missing_settings[@]} -gt 0 ]]; then
+        echo ""
+        echo "❌ エラー: 必須設定が完了していません！"
+        echo "================================"
+        echo ""
+        echo "以下の項目がプレースホルダーのままです:"
+        for setting in "${missing_settings[@]}"; do
+            echo "  • $setting"
+        done
+        echo ""
+        echo "📋 設定手順:"
+        echo "  1. DEFAULT_REPO に自分のリポジトリを設定（例: \"your-username/your-repo\"）"
+        echo "  2. scripts/create-github-actions-sp.sh を実行"
+        echo "  3. 出力された Azure 認証情報をこのスクリプトに転記"
+        echo "  4. 再度このスクリプトを実行"
+        echo ""
+        echo "💡 設定例:"
+        echo "  DEFAULT_REPO=\"your-username/azure-devsecops-demo\""
+        echo "  AZURE_SUBSCRIPTION_ID=\"12345678-1234-1234-1234-123456789abc\""
+        echo "  AZURE_CLIENT_ID=\"87654321-4321-4321-4321-cba987654321\""
+        echo "  AZURE_CLIENT_SECRET=\"abc~xxxxxxxxxxxxxxxxxxxxxxxxxxx\""
+        echo "  AZURE_TENANT_ID=\"11111111-2222-3333-4444-555555555555\""
+        echo ""
+        exit 1
+    fi
+
+    echo "✅ 必須設定: 完了"
+}
 
 # 使用方法を表示
 usage() {
@@ -164,6 +226,12 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
+# ============================================================
+# 最初に必須設定をチェック
+# ============================================================
+validate_required_settings
+echo ""
 
 echo ""
 echo "================================"

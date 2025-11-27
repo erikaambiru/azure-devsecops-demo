@@ -9,8 +9,12 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-# --- 設定値(必要に応じて編集) ---
-$DefaultRepo = 'aktsmm/ContainerApp-demo2'
+# ============================================================
+# 📝 設定値（必須：必ず編集してください）
+# ============================================================
+
+# 自分の GitHub リポジトリを設定（例: "your-username/your-repo"）
+$DefaultRepo = 'your-username/your-repo'
 
 # パスワード一括変更機能
 Write-Host '================================' -ForegroundColor Cyan
@@ -35,17 +39,75 @@ if ($response -eq 'Y' -or $response -eq 'y') {
 	Write-Host ''
 }
 
-$GitHubSecrets = @{
-	# scripts/create-github-actions-sp.ps1 の出力値を転記する
+# ============================================================
+# 🔐 Azure 認証情報（必須）
+# scripts/create-github-actions-sp.ps1 の出力値を転記してください
+# ============================================================
+$AzureCredentials = @{
 	AZURE_SUBSCRIPTION_ID = 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+	AZURE_CLIENT_ID       = 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+	AZURE_CLIENT_SECRET   = 'xxx~xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+	AZURE_TENANT_ID       = 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+}
+
+# 必須設定のバリデーション（プレースホルダーチェック）
+$placeholderPatterns = @(
+	'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+	'xxx~xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+	'your-username/your-repo'
+)
+
+$missingSettings = @()
+
+# リポジトリのチェック
+if ($DefaultRepo -eq 'your-username/your-repo') {
+	$missingSettings += 'DefaultRepo'
+}
+
+# Azure 認証情報のチェック
+foreach ($cred in $AzureCredentials.GetEnumerator()) {
+	if ($placeholderPatterns -contains $cred.Value) {
+		$missingSettings += $cred.Key
+	}
+}
+
+if ($missingSettings.Count -gt 0) {
+	Write-Host ''
+	Write-Host '❌ エラー: 必須設定が完了していません！' -ForegroundColor Red
+	Write-Host '================================' -ForegroundColor Red
+	Write-Host ''
+	Write-Host '以下の項目がプレースホルダーのままです:' -ForegroundColor Yellow
+	foreach ($missing in $missingSettings) {
+		Write-Host "  • $missing" -ForegroundColor Yellow
+	}
+	Write-Host ''
+	Write-Host '📋 設定手順:' -ForegroundColor Cyan
+	Write-Host '  1. $DefaultRepo に自分のリポジトリを設定（例: "your-username/your-repo"）'
+	Write-Host '  2. scripts/create-github-actions-sp.ps1 を実行'
+	Write-Host '  3. 出力された Azure 認証情報をこのスクリプトに転記'
+	Write-Host '  4. 再度このスクリプトを実行'
+	Write-Host ''
+	Write-Host '💡 設定例:' -ForegroundColor Gray
+	Write-Host '  $DefaultRepo = "your-username/azure-devsecops-demo"' -ForegroundColor Gray
+	Write-Host '  AZURE_SUBSCRIPTION_ID = "12345678-1234-1234-1234-123456789abc"' -ForegroundColor Gray
+	Write-Host '  AZURE_CLIENT_ID       = "87654321-4321-4321-4321-cba987654321"' -ForegroundColor Gray
+	Write-Host '  AZURE_CLIENT_SECRET   = "abc~xxxxxxxxxxxxxxxxxxxxxxxxxxx"' -ForegroundColor Gray
+	Write-Host '  AZURE_TENANT_ID       = "11111111-2222-3333-4444-555555555555"' -ForegroundColor Gray
+	Write-Host ''
+	throw '必須設定を完了してから再実行してください。'
+}
+
+Write-Host '✅ 必須設定: 完了' -ForegroundColor Green
+Write-Host ''
+
+$GitHubSecrets = @{
+	AZURE_SUBSCRIPTION_ID = $AzureCredentials['AZURE_SUBSCRIPTION_ID']
 }
 
 $GitHubVariables = @{
-
-	# scripts/create-github-actions-sp.ps1 の出力値を転記する
-	AZURE_CLIENT_ID          = 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
-	AZURE_CLIENT_SECRET      = 'xxx~xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
-	AZURE_TENANT_ID          = 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+	AZURE_CLIENT_ID          = $AzureCredentials['AZURE_CLIENT_ID']
+	AZURE_CLIENT_SECRET      = $AzureCredentials['AZURE_CLIENT_SECRET']
+	AZURE_TENANT_ID          = $AzureCredentials['AZURE_TENANT_ID']
     
 	RESOURCE_GROUP_NAME      = 'RG-bbs-app-demo'
 	LOCATION                 = 'japaneast'
