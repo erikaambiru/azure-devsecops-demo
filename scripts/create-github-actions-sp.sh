@@ -12,7 +12,14 @@
 
 set -e
 
+# ============================================================
 # デフォルト値
+# -s, --subscription-id : [必須] Azure サブスクリプション ID
+# -g, --resource-group  : [任意] リソースグループ名
+# -n, --display-name    : [任意] SP 表示名 (既定: gha-sp-secret)
+# -r, --role            : [任意] ロール (既定: Contributor)
+# -y, --years           : [任意] シークレット有効期限 (既定: 2年)
+# ============================================================
 DISPLAY_NAME="gha-sp-secret"
 ROLE_DEFINITION_NAME="Contributor"
 SECRET_DURATION_YEARS=2

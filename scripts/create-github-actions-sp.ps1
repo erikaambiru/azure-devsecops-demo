@@ -8,27 +8,27 @@
 #>
 [CmdletBinding(SupportsShouldProcess = $true)]
 param(
-    # ロールをひもづけるサブスクリプション ID
+    # [必須] ロールをひもづけるサブスクリプション ID
     [Parameter(Mandatory = $true)]
     [string]$SubscriptionId,
 
-    # 既定ではサブスクリプション全体に割り当て。ResourceGroupName か Scope で上書き可能
+    # [任意] 既定ではサブスクリプション全体に割り当て。ResourceGroupName か Scope で上書き可能
     [Parameter()]
     [string]$ResourceGroupName,
 
-    # Scope を完全修飾で指定したい場合に使用 (例: /subscriptions/<id>/resourceGroups/<name>)
+    # [任意] Scope を完全修飾で指定したい場合に使用 (例: /subscriptions/<id>/resourceGroups/<name>)
     [Parameter()]
     [string]$Scope,
 
-    # App Registration の表示名
+    # [任意] App Registration の表示名 (既定: gha-sp-secret)
     [Parameter()]
     [string]$DisplayName = 'gha-sp-secret',
 
-    # 付与するロール (既定: Contributor)。CI/CD ポリシーに合わせて最小権限で上書きする。
+    # [任意] 付与するロール (既定: Contributor)。CI/CD ポリシーに合わせて最小権限で上書きする。
     [Parameter()]
     [string]$RoleDefinitionName = 'Contributor',
 
-    # シークレットの有効期限 (年)。1〜5 年程度を推奨。
+    # [任意] シークレットの有効期限 (年)。1〜5 年程度を推奨。(既定: 2年)
     [Parameter()]
     [ValidateRange(1, 5)]
     [int]$SecretDurationYears = 2
