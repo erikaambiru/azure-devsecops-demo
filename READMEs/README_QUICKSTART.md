@@ -32,6 +32,9 @@
 | 6〜8 | **GitHub Actions** | ワークフロー手動実行（自動でも可）              |
 | 9    | **ブラウザ**       | アプリ動作確認                                  |
 
+> **⏱️ 初回フルデプロイ合計: 約 15〜20 分**（Board/Admin は並列実行）  
+> 詳細なワークフロー実行時間は [README.md](../README.md#%EF%B8%8F-ワークフロー実行時間の目安) を参照
+
 > **💡 ヒント**: インフラデプロイ（手順 6）のワークフローが成功すると、アプリデプロイ（手順 7）のワークフローが **自動でトリガー** されます。初回は手順 6 を実行するだけで、インフラ構築からアプリデプロイまで一気に完了します。
 
 ---
@@ -161,7 +164,7 @@ az account set --subscription "<SUBSCRIPTION_ID>"
 
 ## 4. Service Principal の発行
 
-`scripts/create-github-actions-sp.ps1` を使うと GitHub Actions 専用の Service Principal (クライアントシークレット方式) を作成し、必要な値を一括出力できます。
+`scripts/create-github-actions-sp.ps1`（Windows）または `scripts/create-github-actions-sp.sh`（Mac/Linux）を使うと GitHub Actions 専用の Service Principal (クライアントシークレット方式) を作成し、必要な値を一括出力できます。
 
 ### 自動付与されるロール
 
@@ -172,6 +175,8 @@ az account set --subscription "<SUBSCRIPTION_ID>"
 3. **User Access Administrator** (自動追加) – Managed Identity へのロール割り当て（VM/ACA の Managed Identity に権限付与）
 
 ### 実行例
+
+#### Windows (PowerShell)
 
 **最低限の実行（サブスクリプションスコープ）**:
 
@@ -185,6 +190,23 @@ pwsh ./scripts/create-github-actions-sp.ps1 -SubscriptionId "<SUBSCRIPTION_ID>"
 pwsh ./scripts/create-github-actions-sp.ps1 `
     -SubscriptionId "<SUBSCRIPTION_ID>" `
     -ResourceGroupName "RG-bbs-app-demo"
+```
+
+#### Mac / Linux (Bash)
+
+**最低限の実行（サブスクリプションスコープ）**:
+
+```bash
+chmod +x ./scripts/create-github-actions-sp.sh
+./scripts/create-github-actions-sp.sh -s "<SUBSCRIPTION_ID>"
+```
+
+**リソースグループスコープで実行（推奨）**:
+
+```bash
+./scripts/create-github-actions-sp.sh \
+    -s "<SUBSCRIPTION_ID>" \
+    -g "RG-bbs-app-demo"
 ```
 
 ### パラメータ説明
@@ -214,9 +236,11 @@ AZURE_CLIENT_SECRET = xxx~xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 ## 5. GitHub Secrets / Variables の登録
 
-### 5.1 GitHub CLI を利用する場合
+### 5.1 スクリプトを利用する場合
 
-規定値は `scripts/setup-github-secrets_variables.ps1` で一括反映できます。GitHub CLI で認証済みであることが前提です。
+規定値は `scripts/setup-github-secrets_variables.ps1`（Windows）または `scripts/setup-github-secrets_variables.sh`（Mac/Linux）で一括反映できます。GitHub CLI で認証済みであることが前提です。
+
+#### Windows (PowerShell)
 
 ```powershell
 pwsh ./scripts/setup-github-secrets_variables.ps1             # $DefaultRepo に設定したリポジトリへ適用
@@ -224,10 +248,19 @@ pwsh ./scripts/setup-github-secrets_variables.ps1 -Repo "owner/repo"  # 別リ�
 pwsh ./scripts/setup-github-secrets_variables.ps1 -DryRun     # 設定内容のみ確認
 ```
 
-- スクリプト起動時に PowerShell から「デフォルトパスワードをランダムな値に一括変更しますか？」と確認されます。`Y` を選ぶと `P@ssw0rd!<乱数>` 形式の値が自動生成され、VM/DB/ACA の各パスワード (`VM_ADMIN_PASSWORD`, `MYSQL_ROOT_PASSWORD`, `DB_APP_PASSWORD`, `ACA_ADMIN_PASSWORD`) に一括適用されます。複数項目を同一パスワードで安全に更新できるため、初期セットアップでは **必ず Y を選択** し、出力されたパスワードを安全な場所へ退避してください。`N` を選ぶとデフォルトの `P@ssw0rd!2025` がそのまま使われます（非推奨）。
+#### Mac / Linux (Bash)
 
-- スクリプト冒頭の `$DefaultRepo`, `$GitHubVariables`, `$GitHubSecrets` を編集するだけで既定値を切り替え可能。
-- `AZURE_CLIENT_ID / SECRET / TENANT_ID / AZURE_SUBSCRIPTION_ID` は **手順 4** の `scripts/create-github-actions-sp.ps1` 実行結果をそのまま転記する。（ダミー値はデモ向け）
+```bash
+chmod +x ./scripts/setup-github-secrets_variables.sh
+./scripts/setup-github-secrets_variables.sh                    # DEFAULT_REPO に設定したリポジトリへ適用
+./scripts/setup-github-secrets_variables.sh -r "owner/repo"   # 別リポジトリへ適用
+./scripts/setup-github-secrets_variables.sh --dry-run         # 設定内容のみ確認
+```
+
+- スクリプト起動時に「デフォルトパスワードをランダムな値に一括変更しますか？」と確認されます。`Y` を選ぶと `P@ssw0rd!<乱数>` 形式の値が自動生成され、VM/DB/ACA の各パスワード (`VM_ADMIN_PASSWORD`, `MYSQL_ROOT_PASSWORD`, `DB_APP_PASSWORD`, `ACA_ADMIN_PASSWORD`) に一括適用されます。複数項目を同一パスワードで安全に更新できるため、初期セットアップでは **必ず Y を選択** し、出力されたパスワードを安全な場所へ退避してください。`N` を選ぶとデフォルトの `P@ssw0rd!2025` がそのまま使われます（非推奨）。
+
+- スクリプト冒頭の変数（`$DefaultRepo` / `DEFAULT_REPO` など）を編集するだけで既定値を切り替え可能。
+- `AZURE_CLIENT_ID / SECRET / TENANT_ID / AZURE_SUBSCRIPTION_ID` は **手順 4** のスクリプト実行結果をそのまま転記する。（ダミー値はデモ向け）
 - `-Repo` を省略し `$DefaultRepo` も空の場合、git remote から自動取得し、それでも不明な場合は対話入力を促します。
 - `-DryRun` は gh CLI を呼ばず実行プランだけを表示します。実際に反映する前の確認に使用してください。
 

@@ -1,3 +1,24 @@
+<#
+.SYNOPSIS
+    Bicep パラメータファイルから Kustomize 用の vars.env を生成するスクリプト
+
+.DESCRIPTION
+    infra/parameters/main-dev.parameters.json から boardAppNamespace の値を読み取り、
+    app/board-app/k8s/vars.env に書き出します。
+    Kustomize がこのファイルを参照して K8s マニフェストに Namespace を反映します。
+
+.USAGE
+    使用箇所:
+    - GitHub Actions: .github/workflows/2-board-app-build-deploy.yml
+      「Namespace/Ingress の値を同期」ステップで実行される
+    
+    実行タイミング:
+    - Board App のビルド＆デプロイワークフロー実行時（AKS デプロイ前）
+    - Bicep パラメータの boardAppNamespace を変更した場合に自動反映
+
+    ローカル実行例:
+    pwsh ./scripts/sync-board-vars.ps1
+#>
 [CmdletBinding()]
 param(
     [string]$ParametersFile = (Join-Path $PSScriptRoot '../infra/parameters/main-dev.parameters.json'),
