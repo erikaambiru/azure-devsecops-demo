@@ -50,7 +50,8 @@ resource publicIp 'Microsoft.Network/publicIPAddresses@2023-09-01' = {
     name: 'Basic'
   }
   properties: {
-    publicIPAllocationMethod: 'Dynamic'
+    // Static に設定：再デプロイ時のエラー防止、IP 固定で SSH 接続先が安定
+    publicIPAllocationMethod: 'Static'
   }
   tags: tags
 }
