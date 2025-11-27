@@ -60,7 +60,7 @@ GITGUARDIAN_API_KEY=""
 DRY_RUN=false
 REPO=""
 
-# 必須設定のバリデーション（プレースホルダーチェック）
+# 必須設定のバリデーション（プレースホルダーチェック） 　以下は変数置き換えをしてるかのチェックをしているだけなので変更しないでください
 validate_required_settings() {
     local missing_settings=()
     local placeholder_guid="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
