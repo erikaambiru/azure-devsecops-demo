@@ -81,7 +81,7 @@
       "value": "systempool"
     },
     "aksNodeVmSize": {
-      "value": "Standard_B2s"
+      "value": "Standard_DS1_v2"
     },
     "aksNodeCount": {
       "value": 1
