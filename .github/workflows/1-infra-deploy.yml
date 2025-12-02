@@ -44,6 +44,14 @@ jobs:
           creds: >-
             {"clientId":"${{ vars.AZURE_CLIENT_ID }}","tenantId":"${{ vars.AZURE_TENANT_ID }}","clientSecret":"${{ vars.AZURE_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AZURE_SUBSCRIPTION_ID }}"}
 
+      - name: サブスクリプションコンテキストを明示設定
+        run: |
+          az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+
+      - name: Azure アカウント情報を出力
+        run: |
+          az account show --output json
+
       - name: Service Principal に Policy 権限を付与
         run: |
           set -euo pipefail
@@ -197,6 +205,14 @@ jobs:
         with:
           creds: >-
             {"clientId":"${{ vars.AZURE_CLIENT_ID }}","tenantId":"${{ vars.AZURE_TENANT_ID }}","clientSecret":"${{ vars.AZURE_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AZURE_SUBSCRIPTION_ID }}"}
+
+      - name: サブスクリプションコンテキストを明示設定
+        run: |
+          az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+
+      - name: Azure アカウント情報を出力
+        run: |
+          az account show --output json
 
       - name: Bicep Validate
         run: |
@@ -491,5 +507,5 @@ jobs:
       - name: Azure logout
         if: always()
         run: az logout
-
 # trigger workflow registration
+
